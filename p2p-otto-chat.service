@@ -1,0 +1,22 @@
+[Unit]
+Description=OTTO P2P Chat Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=p2pchat
+Group=p2pchat
+EnvironmentFile=/etc/p2p-otto-chat/p2pchat.env
+WorkingDirectory=/opt/p2p-otto-chat
+ExecStart=/opt/p2p-otto-chat/venv/bin/python /opt/p2p-otto-chat/service_runner.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/p2p-otto-chat /var/log
+
+[Install]
+WantedBy=multi-user.target

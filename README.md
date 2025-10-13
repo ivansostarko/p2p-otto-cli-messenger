@@ -1,47 +1,46 @@
-# OTTO P2P Chat (CLI)
+# OTTO P2P Chat — System Installer
 
-A simple **peer‑to‑peer direct chat** over TCP where **all text and files** are encrypted with the **OTTO algorithm**.
+This bundle installs the OTTO P2P Chat as:
+- a **system application** (`/usr/local/bin/p2pchat` interactive CLI), and
+- a **systemd service** (`p2p-otto-chat.service`) for headless operation.
 
-- Handshake: **X25519 ephemeral** exchange to derive a **32‑byte session key** (HKDF, label: `OTTO-P2P-SESSION`).  
-- Data encryption: OTTO **raw‑key mode** (session key) with **AES‑256‑GCM**, header bound as AAD, **deterministic HKDF nonces**.
-- Files: streamed to a temporary `.otto` container on the sender, transmitted, then decrypted on the receiver.
+Supported: **Ubuntu/Debian**, **CentOS/RHEL** (systemd-based).
+
+## Files
+- `install.sh` — installer
+- `uninstall.sh` — uninstaller
+- `p2p-otto-chat.service` — systemd unit
+- `p2pchat.env.example` — config template copied to `/etc/p2p-otto-chat/p2pchat.env`
+- `app/` — application sources (Python)
 
 ## Install
-
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+sudo bash install.sh
+sudo nano /etc/p2p-otto-chat/p2pchat.env   # set MODE=host|client, PORT, NICKNAME, HOST (if client)
+sudo systemctl start p2p-otto-chat
+systemctl status p2p-otto-chat
+journalctl -u p2p-otto-chat -f
 ```
 
-## Run
-
-On one machine (host):
+The interactive CLI (manual use) stays available:
 ```bash
-python chat.py
-# choose: host, pick a port (default 5000)
+p2pchat
 ```
 
-On the other machine (client):
-```bash
-python chat.py
-# choose: connect, enter host IP and port
+## Service config (`/etc/p2p-otto-chat/p2pchat.env`)
+```ini
+P2PCHAT_MODE=host           # host or client
+P2PCHAT_PORT=5000           # port to listen/connect
+P2PCHAT_NICKNAME=service    # nickname
+# P2PCHAT_HOST=192.168.1.50  # required in client mode
 ```
 
-## Usage
+## Uninstall
+```bash
+sudo bash uninstall.sh
+```
 
-- First screen: enter **nickname** and then **host/connect**.
-- After the secure session is established, type text messages or:
-  - `/file <path>` to send any file (photo, pdf, mp3/mp4, etc.).
-  - `/quit` to exit.
-
-Received files are saved under your **Downloads** folder.
-
-## Security notes
-
-- The session key is derived from the X25519 shared secret using **HKDF(SHA‑256)** with both ephemeral public keys as salt (order‑independent).
-- Message/file encryption uses OTTO **raw‑key mode** (header format compatible with the OTTO spec). Each object carries its own `file_salt`, ensuring fresh keys per object while keeping the same session key.
-- Nonces are derived per chunk via HKDF with the `"OTTO-CHUNK-NONCE"||counter64be` label, preventing GCM nonce reuse.
-- This is a minimal demo; add identity authentication (e.g., Ed25519 signatures over the handshake) if you need to verify who is on the other end.
-
-MIT © 2025 Ivan Sostarko
+## Notes
+- The service uses a dedicated system user `p2pchat` and installs to `/opt/p2p-otto-chat`.
+- Dependencies are installed via apt (Ubuntu/Debian) or yum/dnf (CentOS/RHEL). Python packages are isolated in a venv.
+- For production, consider adding an authenticated identity layer (e.g., Ed25519 signatures) on top of the ephemeral X25519 handshake.
